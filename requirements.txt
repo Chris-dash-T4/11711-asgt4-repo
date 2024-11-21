@@ -1,0 +1,7 @@
+fschat[model_worker,webui]
+vllm
+openai
+anthropic
+google-generativeai
+openpyxl
+termcolor
