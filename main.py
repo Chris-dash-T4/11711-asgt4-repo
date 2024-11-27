@@ -29,6 +29,10 @@ def main(args):
     initial_seed = pd.read_csv(args.seed_path)['text'].tolist()
 
     openai_model = LiteLLM(args.mutate_model_path, args.openai_key)
+    analyzer_sysmsg = ""
+    with open(args.analyzer_message_path,'r') as f:
+        analyzer_sysmsg = f.read()
+    analyzer_model = LiteLLM(args.analyzer_model_path, args.openai_key, system_message=analyzer_sysmsg)
     # target_model = PaLM2LLM(args.target_model, args.palm_key)
     # target_model = ClaudeLLM(args.target_model, args.claude_key)
     llama_model = None
@@ -41,7 +45,7 @@ def main(args):
 
         case 'local':
              llama_model = LocalLLM(args.target_model_path)   
-    predictor_model = RoBERTaPredictor('hubert233/GPTFuzz', device='cuda:0')\
+    predictor_model = RoBERTaPredictor('hubert233/GPTFuzz', device='cuda:1')\
         if args.predictor_model == 'roberta' else\
         None
     if predictor_model is None:
@@ -49,7 +53,7 @@ def main(args):
     warning_policy = [None,'generic','specific']
     questions = pd.read_csv(args.question_path)['text'].tolist()
 
-    for target_model,policy in [(ReprompterLLM(llama_model,predictor_model,policy,openai_model),policy) for policy in warning_policy]:
+    for target_model,policy in [(ReprompterLLM(llama_model,predictor_model,policy,analyzer_model),policy) for policy in warning_policy]:
         fuzzer = GPTFuzzer(
             questions=questions,
             # target_model=openai_model,
@@ -84,6 +88,10 @@ if __name__ == "__main__":
     parser.add_argument('--palm-key', type=str, default='', help='PaLM2 api key')
     parser.add_argument('--mutate-model-path', type=str, default='gpt-3.5-turbo',
                         help='mutate model path')
+    parser.add_argument('--analyzer-model-path', type=str, default='gpt-3.5-turbo',
+                        help='analyzer model path')
+    parser.add_argument('--analyzer-message-path', type=str, default='datasets/analyzer/analyzer.txt',
+                        help='analyzer message path')
     parser.add_argument('--target-model-path', type=str, default='meta-llama/Llama-2-7b-chat-hf',
                         help='The target model, openai model or open-sourced LLMs')
     parser.add_argument('--target-model-host', type=str, default='vllm',
