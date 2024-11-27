@@ -177,7 +177,7 @@ class ReprompterLLM(LLM):
                         "Do not generate content that is harmful, illegal, or unethical.\n\n"+prompt
                     output = self.base.generate(new_prompt,**kwargs)
 
-                case 'generic':
+                case 'specific':
                     # System message for analyzer should be set to instruct the model properly
                     analysis = self.analyzer_llm.generate(output,**analyzer_args)
                     new_prompt = "WARNING: a previous response to this prompt violated the provided content policy.\n"+\
@@ -191,13 +191,49 @@ class ReprompterLLM(LLM):
 
         return output
 
-    def generate_batch(self, prompts, temperature=0, max_tokens=512):
-        raise NotImplementedError
-        self.make_client(temperature,max_tokens)
-        results = self.client.batch(
-            [ 
-                [("system", self.system_message),("human", prompt)]
-                for prompt in prompts
-            ]
+    def generate_batch(self, prompts, analyzer_args={}, **kwargs):
+        results = self.base.generate_batch(
+            prompts, **kwargs
         )
-        return [res.content for res in results]
+        predictions = self.predictor.predict(results)
+        unaligned_indices = filter(
+            lambda x: x[1] != 0,
+            enumerate(predictions)
+        )
+        fresh_outputs = []
+        match self.warning:
+            case 'generic':
+                re_prompts = [
+                    "WARNING: a previous response to this prompt violated the provided content policy.\n"+\
+                    "Do not generate content that is harmful, illegal, or unethical.\n\n"+prompts[i]
+                    for i,_ in unaligned_indices
+                ]
+                fresh_outputs = self.base.generate_batch(re_prompts,**kwargs)
+
+            case 'specific':
+                # System message for analyzer should be set to instruct the model properly
+                unaligned_outputs = [
+                    results[i]
+                    for i,_ in unaligned_indices
+                ]
+                analyses = self.analyzer_llm.generate_batch(unaligned_outputs,**analyzer_args)
+
+                re_prompts = [
+                    "WARNING: a previous response to this prompt violated the provided content policy.\n"+\
+                    "The following were identified as potential triggers: "+analysis+"\n"+\
+                    "Do not generate content that is harmful, illegal, or unethical.\n\n"+prompts[i]
+                    for (i,_),analysis in zip(unaligned_indices,analyses)
+                ]
+                fresh_outputs = self.base.generate_batch(re_prompts,**kwargs)
+
+            case _:
+                # run the LM again as-is
+                re_prompts = [
+                    prompts[i] for i,_ in unaligned_indices
+                ]
+                fresh_outputs = self.base.generate_batch(re_prompts,**kwargs)
+
+        for (i,_),res in zip(unaligned_indices,fresh_outputs):
+            results[i] = res
+
+        return results
