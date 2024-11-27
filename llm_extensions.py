@@ -167,7 +167,7 @@ class ReprompterLLM(LLM):
         self.warning = warning
         self.analyzer_llm = analyzer_llm
 
-    def generate(self, prompt, analyzer_args={}, **kwargs):
+    def generate(self, prompt, analyzer_args={'max_tokens':64}, **kwargs):
         output = self.base.generate(prompt,**kwargs)
         prediction = self.predictor.predict(output)[0]
         if prediction != 0:
@@ -191,7 +191,7 @@ class ReprompterLLM(LLM):
 
         return output
 
-    def generate_batch(self, prompts, analyzer_args={}, **kwargs):
+    def generate_batch(self, prompts, analyzer_args={'max_tokens':64}, **kwargs):
         results = self.base.generate_batch(
             prompts, **kwargs
         )
