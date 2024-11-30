@@ -50,7 +50,9 @@ def main(args):
         None
     if predictor_model is None:
         raise NotImplementedError(f'Predictor model "{args.predictor_model}" not yet implemented.')
-    warning_policy = [None,'generic','specific']
+    warning_policy = [None,'generic','specific'] if args.warning_policy == 'all' else [args.warning_policy]
+    if warning_policy == ['nowarn']:
+        warning_policy = [None]
     questions = pd.read_csv(args.question_path)['text'].tolist()
 
     for target_model,policy in [(ReprompterLLM(llama_model,predictor_model,policy,analyzer_model),policy) for policy in warning_policy]:
@@ -114,6 +116,8 @@ if __name__ == "__main__":
                         default="datasets/questions/question_list.csv")
     parser.add_argument("--predictor-model", type=str,
                         default="roberta", choices=['roberta','llamaguard'])
+    parser.add_argument("--warning-policy", type=str,
+                        default="all", choices=['all','nowarn','generic','specific'])
     add_model_args(parser)
 
     args = parser.parse_args()
