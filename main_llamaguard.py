@@ -11,11 +11,9 @@ from gptfuzzer.fuzzer.mutator import (
     OpenAIMutatorGenerateSimilar, OpenAIMutatorRephrase, OpenAIMutatorShorten)
 from gptfuzzer.fuzzer import GPTFuzzer
 from gptfuzzer.llm import OpenAILLM, LocalVLLM, LocalLLM, PaLM2LLM, ClaudeLLM
-from gptfuzzer.utils.predict import RoBERTaPredictor
+from gptfuzzer.utils.predict import RoBERTaPredictor, LlamaGuardPredictor
 
 from llm_extensions import ReprompterLLM, LiteLLM, LangchainOllamaLLM
-
-from transformers import AutoModelForCausalLM
 
 import random
 random.seed(100)
@@ -47,7 +45,7 @@ def main(args):
 
         case 'local':
              llama_model = LocalLLM(args.target_model_path)  
-    predictor_model = AutoModelForCausalLM.from_pretrained("meta-llama/Llama-Guard-3-8B", device='cuda:1')\
+    predictor_model = LlamaGuardPredictor("meta-llama/Llama-Guard-3-8B", device='cuda:1')\
         if args.predictor_model == 'llamaguard' else\
         None
     if predictor_model is None:
