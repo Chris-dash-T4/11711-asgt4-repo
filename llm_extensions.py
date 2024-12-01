@@ -179,7 +179,7 @@ class ReprompterLLM(LLM):
 
                 case 'specific':
                     # System message for analyzer should be set to instruct the model properly
-                    analysis = self.analyzer_llm.generate(output,**analyzer_args)
+                    analysis = self.analyzer_llm.generate(output,**analyzer_args)[0]
                     new_prompt = "WARNING: a previous response to this prompt violated the provided content policy.\n"+\
                         "The following were identified as potential triggers: "+analysis+"\n"+\
                         "Do not generate content that is harmful, illegal, or unethical.\n\n"+prompt
