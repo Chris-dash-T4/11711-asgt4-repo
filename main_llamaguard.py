@@ -45,6 +45,7 @@ def main(args):
 
         case 'local':
              llama_model = LocalLLM(args.target_model_path)  
+    roberta_predictor_model = RoBERTaPredictor("hubert233/GPTFuzz", device='cuda:1')
     predictor_model = LlamaGuardPredictor("meta-llama/Llama-Guard-3-8B", device='cuda:1')\
         if args.predictor_model == 'llamaguard' else\
         None
@@ -58,7 +59,8 @@ def main(args):
             questions=questions,
             # target_model=openai_model,
             target=target_model,
-            predictor=predictor_model,
+            # Use RoBERTa here for consistent metrics
+            predictor=roberta_predictor_model,
             initial_seed=initial_seed,
             mutate_policy=MutateRandomSinglePolicy([
                 OpenAIMutatorCrossOver(openai_model, temperature=args.temperature),
@@ -72,8 +74,8 @@ def main(args):
             energy=args.energy,
             max_jailbreak=args.max_jailbreak,
             max_query=args.max_query,
-            generate_in_batch=False,
-            result_file=f'results-{policy or "nowarn"}-{time.strftime("%Y-%m-%d-%H-%M-%S",time.localtime())}.csv'
+            generate_in_batch=True,
+            result_file=f'results-{policy or "nowarn"}-{args.predictor_model}-{time.strftime("%Y-%m-%d-%H-%M-%S",time.localtime())}.csv'
         )
 
         fuzzer.run()
